@@ -1,0 +1,1373 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+  <title>Antigravity Flap | Desafio de Gravidade</title>
+  <meta name="description" content="Jogo arcade casual de gravidade e reflexo estilo Flappy Bird com física de antigravidade, efeitos de áudio e ranking global no Firebase.">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;800;900&family=Space+Grotesk:wght@500;700&display=swap" rel="stylesheet">
+  
+  <style>
+    :root {
+      --bg-dark: #070913;
+      --cyan-neon: #00f0ff;
+      --purple-neon: #a855f7;
+      --pink-neon: #ec4899;
+      --yellow-gold: #facc15;
+      --emerald-neon: #10b981;
+      --text-main: #f8fafc;
+      --text-muted: #94a3b8;
+      --glass-bg: rgba(15, 23, 42, 0.75);
+      --glass-border: rgba(255, 255, 255, 0.12);
+    }
+
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+      -webkit-user-select: none;
+      -webkit-touch-callout: none;
+    }
+
+    body, html {
+      width: 100%;
+      height: 100%;
+      overflow: hidden;
+      background-color: var(--bg-dark);
+      font-family: 'Outfit', sans-serif;
+      color: var(--text-main);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+    }
+
+    #game-container {
+      position: relative;
+      width: 100%;
+      height: 100%;
+      max-width: 480px;
+      max-height: 850px;
+      aspect-ratio: 9 / 16;
+      background: radial-gradient(circle at center, #111827 0%, #030712 100%);
+      overflow: hidden;
+      box-shadow: 0 25px 50px -12px rgba(0, 240, 255, 0.25), 0 0 0 1px rgba(255, 255, 255, 0.1);
+      border-radius: 20px;
+    }
+
+    @media (max-width: 600px) {
+      #game-container {
+        max-width: 100%;
+        max-height: 100%;
+        border-radius: 0;
+        box-shadow: none;
+      }
+    }
+
+    canvas {
+      width: 100%;
+      height: 100%;
+      display: block;
+      cursor: pointer;
+    }
+
+    /* Interface HUD */
+    .hud {
+      position: absolute;
+      top: 20px;
+      left: 0;
+      right: 0;
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 0 24px;
+      pointer-events: none;
+      z-index: 10;
+    }
+
+    .score-badge {
+      display: flex;
+      flex-direction: column;
+      align-items: flex-start;
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      padding: 6px 16px;
+      border-radius: 14px;
+    }
+
+    .score-label {
+      font-size: 11px;
+      text-transform: uppercase;
+      letter-spacing: 1.5px;
+      color: var(--cyan-neon);
+      font-weight: 700;
+    }
+
+    .score-value {
+      font-size: 28px;
+      font-weight: 900;
+      line-height: 1;
+      color: #ffffff;
+      text-shadow: 0 0 12px rgba(0, 240, 255, 0.6);
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .hud-controls {
+      display: flex;
+      gap: 10px;
+      pointer-events: auto;
+    }
+
+    .icon-btn {
+      background: var(--glass-bg);
+      backdrop-filter: blur(12px);
+      border: 1px solid var(--glass-border);
+      color: var(--text-main);
+      width: 42px;
+      height: 42px;
+      border-radius: 12px;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      cursor: pointer;
+      font-size: 18px;
+      transition: all 0.2s ease;
+    }
+
+    .icon-btn:hover {
+      background: rgba(255, 255, 255, 0.15);
+      border-color: var(--cyan-neon);
+      transform: scale(1.05);
+    }
+
+    .icon-btn:active {
+      transform: scale(0.95);
+    }
+
+    /* Modais e Telas de Overlay */
+    .overlay-screen {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      background: rgba(3, 7, 18, 0.78);
+      backdrop-filter: blur(10px);
+      padding: 24px;
+      z-index: 20;
+      opacity: 1;
+      transition: opacity 0.3s ease;
+    }
+
+    .overlay-screen.hidden {
+      opacity: 0;
+      pointer-events: none;
+    }
+
+    .title-box {
+      text-align: center;
+      margin-bottom: 24px;
+    }
+
+    .game-logo {
+      font-size: 38px;
+      font-weight: 900;
+      letter-spacing: -1px;
+      line-height: 1.1;
+      background: linear-gradient(135deg, #ffffff 0%, var(--cyan-neon) 50%, var(--purple-neon) 100%);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 0 30px rgba(0, 240, 255, 0.4);
+      margin-bottom: 6px;
+    }
+
+    .game-tagline {
+      font-size: 13px;
+      color: var(--text-muted);
+      letter-spacing: 2px;
+      text-transform: uppercase;
+      font-weight: 600;
+    }
+
+    .card {
+      background: var(--glass-bg);
+      border: 1px solid var(--glass-border);
+      border-radius: 20px;
+      padding: 20px;
+      width: 100%;
+      max-width: 340px;
+      box-shadow: 0 20px 40px rgba(0, 0, 0, 0.6);
+      text-align: center;
+      margin-bottom: 20px;
+    }
+
+    .instruction-list {
+      list-style: none;
+      font-size: 13px;
+      color: #cbd5e1;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+      text-align: left;
+      margin: 12px 0;
+    }
+
+    .instruction-list li {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .instruction-list li span.key {
+      background: rgba(255, 255, 255, 0.12);
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      padding: 2px 8px;
+      border-radius: 6px;
+      font-family: 'Space Grotesk', monospace;
+      font-size: 11px;
+      color: var(--cyan-neon);
+    }
+
+    .btn-action {
+      background: linear-gradient(135deg, var(--cyan-neon) 0%, #0284c7 100%);
+      color: #030712;
+      font-family: 'Outfit', sans-serif;
+      font-weight: 800;
+      font-size: 16px;
+      border: none;
+      border-radius: 14px;
+      padding: 14px 28px;
+      width: 100%;
+      max-width: 340px;
+      cursor: pointer;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 10px;
+      box-shadow: 0 10px 25px rgba(0, 240, 255, 0.35);
+      transition: all 0.2s cubic-bezier(0.34, 1.56, 0.64, 1);
+    }
+
+    .btn-action:hover {
+      transform: translateY(-2px) scale(1.02);
+      box-shadow: 0 15px 30px rgba(0, 240, 255, 0.5);
+    }
+
+    .btn-action:active {
+      transform: translateY(1px) scale(0.98);
+    }
+
+    .btn-action.btn-accent {
+      background: linear-gradient(135deg, var(--purple-neon) 0%, var(--pink-neon) 100%);
+      color: #ffffff;
+      box-shadow: 0 10px 25px rgba(168, 85, 247, 0.4);
+    }
+
+    .btn-action.btn-accent:hover {
+      box-shadow: 0 15px 30px rgba(168, 85, 247, 0.6);
+    }
+
+    /* Placar Final */
+    .gameover-stat-grid {
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 12px;
+      margin: 16px 0;
+    }
+
+    .stat-box {
+      background: rgba(0, 0, 0, 0.3);
+      padding: 12px 10px;
+      border-radius: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+    }
+
+    .stat-title {
+      font-size: 11px;
+      color: var(--text-muted);
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 4px;
+    }
+
+    .stat-num {
+      font-size: 26px;
+      font-weight: 900;
+      font-family: 'Space Grotesk', sans-serif;
+    }
+
+    .stat-num.current {
+      color: var(--cyan-neon);
+    }
+
+    .stat-num.best {
+      color: var(--yellow-gold);
+    }
+
+    /* Leaderboard Drawer */
+    .leaderboard-container {
+      margin-top: 14px;
+      background: rgba(0, 0, 0, 0.35);
+      border-radius: 14px;
+      padding: 12px;
+      border: 1px solid rgba(255, 255, 255, 0.06);
+      max-height: 170px;
+      overflow-y: auto;
+    }
+
+    .leaderboard-title {
+      font-size: 12px;
+      font-weight: 700;
+      letter-spacing: 1px;
+      color: var(--yellow-gold);
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      margin-bottom: 10px;
+      text-transform: uppercase;
+    }
+
+    .leaderboard-list {
+      list-style: none;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      font-size: 12px;
+    }
+
+    .leaderboard-item {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 5px 8px;
+      background: rgba(255, 255, 255, 0.04);
+      border-radius: 8px;
+    }
+
+    .leaderboard-item:first-child {
+      border: 1px solid rgba(250, 204, 21, 0.35);
+      background: rgba(250, 204, 21, 0.08);
+      color: var(--yellow-gold);
+      font-weight: 700;
+    }
+
+    .player-input-row {
+      display: flex;
+      gap: 8px;
+      margin-top: 14px;
+      width: 100%;
+    }
+
+    .player-input {
+      flex: 1;
+      background: rgba(0, 0, 0, 0.5);
+      border: 1px solid var(--glass-border);
+      border-radius: 10px;
+      padding: 10px 14px;
+      color: #ffffff;
+      font-family: 'Outfit', sans-serif;
+      font-size: 13px;
+      outline: none;
+    }
+
+    .player-input:focus {
+      border-color: var(--cyan-neon);
+      box-shadow: 0 0 10px rgba(0, 240, 255, 0.3);
+    }
+
+    .btn-save-score {
+      background: var(--cyan-neon);
+      color: #030712;
+      border: none;
+      border-radius: 10px;
+      padding: 0 16px;
+      font-weight: 800;
+      font-size: 12px;
+      cursor: pointer;
+      transition: all 0.2s ease;
+    }
+
+    .btn-save-score:hover {
+      background: #38bdf8;
+    }
+
+    .btn-save-score:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
+
+    .new-record-badge {
+      display: inline-block;
+      background: linear-gradient(90deg, #f59e0b, #ef4444);
+      color: #fff;
+      font-size: 11px;
+      font-weight: 800;
+      padding: 3px 10px;
+      border-radius: 20px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+      margin-bottom: 8px;
+      animation: pulse 1.5s infinite;
+    }
+
+    @keyframes pulse {
+      0%, 100% { transform: scale(1); opacity: 1; }
+      50% { transform: scale(1.06); opacity: 0.85; }
+    }
+
+    /* Scrollbar personalizada */
+    .leaderboard-container::-webkit-scrollbar {
+      width: 4px;
+    }
+    .leaderboard-container::-webkit-scrollbar-thumb {
+      background: rgba(255, 255, 255, 0.2);
+      border-radius: 4px;
+    }
+  </style>
+</head>
+<body>
+
+  <div id="game-container">
+    <!-- Canvas de Renderização do Jogo -->
+    <canvas id="game-canvas"></canvas>
+
+    <!-- HUD em Jogo -->
+    <div class="hud" id="game-hud">
+      <div class="score-badge">
+        <span class="score-label">Pontos</span>
+        <span class="score-value" id="current-score-text">0</span>
+      </div>
+      <div class="hud-controls">
+        <button class="icon-btn" id="sound-btn" title="Ligar/Desligar Som" aria-label="Som">
+          🔊
+        </button>
+      </div>
+    </div>
+
+    <!-- Tela Inicial (Start Screen) -->
+    <div class="overlay-screen" id="start-screen">
+      <div class="title-box">
+        <h1 class="game-logo">ANTIGRAVITY<br>FLAP</h1>
+        <p class="game-tagline">Controle a Gravidade Quântica</p>
+      </div>
+
+      <div class="card">
+        <ul class="instruction-list">
+          <li>
+            <span>👆</span>
+            <div><strong>Clique</strong> ou <strong>Toque</strong> na tela para ativar o propulsor de antigravidade.</div>
+          </li>
+          <li>
+            <span class="key">ESPAÇO</span>
+            <div>Também funciona com a barra de espaço ou tecla <span class="key">▲</span>.</div>
+          </li>
+          <li>
+            <span>⚡</span>
+            <div>Evite as colunas de plasma gravitacional e quebre recordes!</div>
+          </li>
+        </ul>
+
+        <div class="leaderboard-container">
+          <div class="leaderboard-title">🏆 Recordes Globais</div>
+          <ul class="leaderboard-list" id="start-leaderboard-list">
+            <li class="leaderboard-item">Carregando placar...</li>
+          </ul>
+        </div>
+      </div>
+
+      <button class="btn-action" id="start-game-btn">
+        <span>INICIAR MISSÃO</span>
+        <span>🚀</span>
+      </button>
+    </div>
+
+    <!-- Tela de Game Over -->
+    <div class="overlay-screen hidden" id="gameover-screen">
+      <div class="title-box">
+        <div id="new-record-alert" class="new-record-badge" style="display:none;">🎉 NOVO RECORDE! 🎉</div>
+        <h2 class="game-logo" style="font-size: 32px;">GAME OVER</h2>
+        <p class="game-tagline">Falha no Campo Gravitacional</p>
+      </div>
+
+      <div class="card">
+        <div class="gameover-stat-grid">
+          <div class="stat-box">
+            <div class="stat-title">Pontuação</div>
+            <div class="stat-num current" id="gameover-score">0</div>
+          </div>
+          <div class="stat-box">
+            <div class="stat-title">Melhor</div>
+            <div class="stat-num best" id="gameover-best">0</div>
+          </div>
+        </div>
+
+        <div id="save-score-section">
+          <div class="player-input-row">
+            <input type="text" id="player-name-input" class="player-input" placeholder="Seu nome ou apelido" maxlength="15">
+            <button id="save-score-btn" class="btn-save-score">Salvar</button>
+          </div>
+        </div>
+
+        <div class="leaderboard-container">
+          <div class="leaderboard-title">🏆 Hall da Fama</div>
+          <ul class="leaderboard-list" id="gameover-leaderboard-list">
+            <li class="leaderboard-item">Carregando...</li>
+          </ul>
+        </div>
+      </div>
+
+      <button class="btn-action btn-accent" id="restart-game-btn">
+        <span>TENTAR NOVAMENTE</span>
+        <span>🔄</span>
+      </button>
+    </div>
+  </div>
+
+  <!-- Firebase SDK modular para Cloud Firestore -->
+  <script type="module">
+    import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+    import { getFirestore, collection, addDoc, query, orderBy, limit, getDocs, serverTimestamp } 
+      from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+    // Configuração do Firebase
+    const firebaseConfig = {
+      projectId: "antigravity-flap-771a",
+      appId: "1:814955337390:web:4595b5661589780ccbbf3f",
+      storageBucket: "antigravity-flap-771a.firebasestorage.app",
+      apiKey: "AIzaSyBuwVxwVOGPQaa5l0jAnf7Lc6YRqROYb40",
+      authDomain: "antigravity-flap-771a.firebaseapp.com",
+      messagingSenderId: "814955337390"
+    };
+
+    // Inicialização
+    let db = null;
+    try {
+      const app = initializeApp(firebaseConfig);
+      db = getFirestore(app);
+    } catch (e) {
+      console.warn("Firebase offline/erro de inicialização:", e);
+    }
+
+    // Expor métodos de dados globalmente para o jogo
+    window.LeaderboardService = {
+      async getTopScores() {
+        if (!db) return this.getLocalTopScores();
+        try {
+          const q = query(collection(db, "leaderboard"), orderBy("score", "desc"), limit(5));
+          const snapshot = await getDocs(q);
+          const scores = [];
+          snapshot.forEach(doc => {
+            scores.push(doc.data());
+          });
+          if (scores.length === 0) return this.getLocalTopScores();
+          return scores;
+        } catch (err) {
+          console.warn("Falha ao buscar do Firestore, usando local:", err);
+          return this.getLocalTopScores();
+        }
+      },
+
+      async saveScore(name, score) {
+        const cleanName = (name || "Piloto").trim().substring(0, 15);
+        this.saveLocalScore(cleanName, score);
+        if (!db) return;
+        try {
+          await addDoc(collection(db, "leaderboard"), {
+            name: cleanName,
+            score: Number(score),
+            createdAt: serverTimestamp()
+          });
+        } catch (err) {
+          console.warn("Erro ao salvar no Firestore:", err);
+        }
+      },
+
+      getLocalTopScores() {
+        try {
+          const local = JSON.parse(localStorage.getItem("antigravity_scores") || "[]");
+          return local.sort((a, b) => b.score - a.score).slice(0, 5);
+        } catch {
+          return [
+            { name: "Alpha", score: 18 },
+            { name: "Quantum", score: 12 },
+            { name: "Orbit", score: 7 }
+          ];
+        }
+      },
+
+      saveLocalScore(name, score) {
+        try {
+          const local = JSON.parse(localStorage.getItem("antigravity_scores") || "[]");
+          local.push({ name, score, date: new Date().toISOString() });
+          local.sort((a, b) => b.score - a.score);
+          localStorage.setItem("antigravity_scores", JSON.stringify(local.slice(0, 10)));
+        } catch (e) {}
+      }
+    };
+
+    // Dispara evento informando que o serviço está pronto
+    window.dispatchEvent(new CustomEvent("leaderboard-ready"));
+  </script>
+
+  <!-- Lógica Central do Jogo e Áudio Procedural -->
+  <script>
+    (function () {
+      // -------------------------------------------------------------
+      // SISTEMA DE ÁUDIO PROCEDURAL (Web Audio API - Sem Arquivos Externos)
+      // -------------------------------------------------------------
+      class SoundFX {
+        constructor() {
+          this.ctx = null;
+          this.muted = false;
+        }
+
+        init() {
+          if (!this.ctx) {
+            const AudioContext = window.AudioContext || window.webkitAudioContext;
+            if (AudioContext) {
+              this.ctx = new AudioContext();
+            }
+          }
+          if (this.ctx && this.ctx.state === 'suspended') {
+            this.ctx.resume();
+          }
+        }
+
+        playFlap() {
+          if (this.muted || !this.ctx) return;
+          try {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            osc.type = 'triangle';
+            osc.frequency.setValueAtTime(260, now);
+            osc.frequency.exponentialRampToValueAtTime(540, now + 0.12);
+
+            gain.gain.setValueAtTime(0.3, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.12);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.13);
+          } catch (e) {}
+        }
+
+        playScore() {
+          if (this.muted || !this.ctx) return;
+          try {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            osc.type = 'sine';
+            osc.frequency.setValueAtTime(587.33, now); // D5
+            osc.frequency.setValueAtTime(880, now + 0.08); // A5
+
+            gain.gain.setValueAtTime(0.25, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.28);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.29);
+          } catch (e) {}
+        }
+
+        playCrash() {
+          if (this.muted || !this.ctx) return;
+          try {
+            const now = this.ctx.currentTime;
+            const osc = this.ctx.createOscillator();
+            const gain = this.ctx.createGain();
+
+            osc.type = 'sawtooth';
+            osc.frequency.setValueAtTime(180, now);
+            osc.frequency.exponentialRampToValueAtTime(35, now + 0.35);
+
+            gain.gain.setValueAtTime(0.4, now);
+            gain.gain.exponentialRampToValueAtTime(0.01, now + 0.35);
+
+            osc.connect(gain);
+            gain.connect(this.ctx.destination);
+
+            osc.start(now);
+            osc.stop(now + 0.36);
+          } catch (e) {}
+        }
+
+        playRecord() {
+          if (this.muted || !this.ctx) return;
+          try {
+            const notes = [440, 554.37, 659.25, 880];
+            notes.forEach((freq, idx) => {
+              const now = this.ctx.currentTime + idx * 0.09;
+              const osc = this.ctx.createOscillator();
+              const gain = this.ctx.createGain();
+
+              osc.type = 'sine';
+              osc.frequency.setValueAtTime(freq, now);
+
+              gain.gain.setValueAtTime(0.25, now);
+              gain.gain.exponentialRampToValueAtTime(0.01, now + 0.18);
+
+              osc.connect(gain);
+              gain.connect(this.ctx.destination);
+
+              osc.start(now);
+              osc.stop(now + 0.19);
+            });
+          } catch (e) {}
+        }
+
+        toggleMute() {
+          this.muted = !this.muted;
+          return this.muted;
+        }
+      }
+
+      const sfx = new SoundFX();
+
+      // -------------------------------------------------------------
+      // ELEMENTOS DO DOM
+      // -------------------------------------------------------------
+      const canvas = document.getElementById('game-canvas');
+      const ctx = canvas.getContext('2d');
+      const container = document.getElementById('game-container');
+
+      const hudCurrentScore = document.getElementById('current-score-text');
+      const soundBtn = document.getElementById('sound-btn');
+
+      const startScreen = document.getElementById('start-screen');
+      const startGameBtn = document.getElementById('start-game-btn');
+      const startLeaderboardList = document.getElementById('start-leaderboard-list');
+
+      const gameoverScreen = document.getElementById('gameover-screen');
+      const restartGameBtn = document.getElementById('restart-game-btn');
+      const gameoverScoreText = document.getElementById('gameover-score');
+      const gameoverBestText = document.getElementById('gameover-best');
+      const newRecordAlert = document.getElementById('new-record-alert');
+      const gameoverLeaderboardList = document.getElementById('gameover-leaderboard-list');
+      const playerNameInput = document.getElementById('player-name-input');
+      const saveScoreBtn = document.getElementById('save-score-btn');
+      const saveScoreSection = document.getElementById('save-score-section');
+
+      // -------------------------------------------------------------
+      // ESTADO DO JOGO E CONSTANTES
+      // -------------------------------------------------------------
+      let width = 0;
+      let height = 0;
+      let gameState = 'START'; // 'START', 'PLAYING', 'GAMEOVER'
+      let score = 0;
+      let bestScore = parseInt(localStorage.getItem('antigravity_best') || '0', 10);
+      let isNewRecord = false;
+      let lastTime = 0;
+      let scoreAlreadySaved = false;
+
+      // Recupera último nome usado
+      const cachedName = localStorage.getItem('antigravity_player_name') || '';
+      if (cachedName) playerNameInput.value = cachedName;
+
+      // -------------------------------------------------------------
+      // ENTIDADES DO JOGO
+      // -------------------------------------------------------------
+
+      // 1. O Jogador (Sonda Antigravitacional)
+      const player = {
+        x: 0,
+        y: 0,
+        radius: 18,
+        velocity: 0,
+        gravity: 1200,      // pixels/s²
+        jumpImpulse: -420,  // impulso ascendente
+        angle: 0,
+        particles: [],
+
+        reset() {
+          this.x = width * 0.28;
+          this.y = height * 0.45;
+          this.velocity = 0;
+          this.angle = 0;
+          this.particles = [];
+        },
+
+        jump() {
+          sfx.init();
+          this.velocity = this.jumpImpulse;
+          sfx.playFlap();
+
+          // Emite partículas de propulsão iônica
+          for (let i = 0; i < 8; i++) {
+            this.particles.push({
+              x: this.x - this.radius * 0.8,
+              y: this.y + (Math.random() * 8 - 4),
+              vx: - (Math.random() * 120 + 80),
+              vy: (Math.random() * 100 - 50),
+              radius: Math.random() * 4 + 2,
+              color: Math.random() > 0.5 ? '#00f0ff' : '#a855f7',
+              alpha: 1,
+              life: 0.4
+            });
+          }
+        },
+
+        update(dt) {
+          this.velocity += this.gravity * dt;
+          this.y += this.velocity * dt;
+
+          // Rotação suave baseada na velocidade
+          const targetAngle = Math.min(Math.max(this.velocity * 0.0018, -0.6), 0.9);
+          this.angle += (targetAngle - this.angle) * 10 * dt;
+
+          // Atualiza partículas
+          for (let i = this.particles.length - 1; i >= 0; i--) {
+            const p = this.particles[i];
+            p.x += p.vx * dt;
+            p.y += p.vy * dt;
+            p.alpha -= dt / p.life;
+            if (p.alpha <= 0) {
+              this.particles.splice(i, 1);
+            }
+          }
+
+          // Rastro contínuo tênue
+          if (Math.random() > 0.4) {
+            this.particles.push({
+              x: this.x - this.radius * 0.9,
+              y: this.y,
+              vx: -(Math.random() * 50 + 20),
+              vy: (Math.random() * 20 - 10),
+              radius: Math.random() * 2 + 1,
+              color: '#00f0ff',
+              alpha: 0.6,
+              life: 0.25
+            });
+          }
+        },
+
+        render(ctx) {
+          // Renderiza partículas
+          for (const p of this.particles) {
+            ctx.save();
+            ctx.globalAlpha = Math.max(0, p.alpha);
+            ctx.fillStyle = p.color;
+            ctx.beginPath();
+            ctx.arc(p.x, p.y, p.radius, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+
+          ctx.save();
+          ctx.translate(this.x, this.y);
+          ctx.rotate(this.angle);
+
+          // Brilho exterior (glow)
+          ctx.shadowColor = '#00f0ff';
+          ctx.shadowBlur = 18;
+
+          // Corpo principal (Orbe de levitação tecnológica)
+          const grad = ctx.createLinearGradient(-this.radius, -this.radius, this.radius, this.radius);
+          grad.addColorStop(0, '#ffffff');
+          grad.addColorStop(0.4, '#00f0ff');
+          grad.addColorStop(1, '#0284c7');
+
+          ctx.fillStyle = grad;
+          ctx.beginPath();
+          ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Anel de contenção gravitacional
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = '#a855f7';
+          ctx.lineWidth = 3;
+          ctx.beginPath();
+          ctx.ellipse(0, 0, this.radius + 3, this.radius * 0.45, Math.PI / 4, 0, Math.PI * 2);
+          ctx.stroke();
+
+          // Núcleo luminoso
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(this.radius * 0.3, -this.radius * 0.3, this.radius * 0.35, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Olho/Sensor frontal futurista
+          ctx.fillStyle = '#0f172a';
+          ctx.beginPath();
+          ctx.arc(this.radius * 0.45, 0, this.radius * 0.28, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.fillStyle = '#f43f5e';
+          ctx.beginPath();
+          ctx.arc(this.radius * 0.52, 0, this.radius * 0.12, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.restore();
+        }
+      };
+
+      // 2. Obstáculos (Pilares de Plasma Gravitacional)
+      const obstacleManager = {
+        obstacles: [],
+        spawnTimer: 0,
+        spawnInterval: 1.8, // segundos entre cada par de pilares
+        baseSpeed: 170,     // pixels/s
+        gapSize: 155,       // vão entre os pilares
+        pillarWidth: 64,
+
+        reset() {
+          this.obstacles = [];
+          this.spawnTimer = 0.5; // primeiro obstáculo logo no início
+        },
+
+        update(dt) {
+          // Ajusta sutilmente a dificuldade com a pontuação
+          const currentSpeed = this.baseSpeed + Math.min(score * 3.5, 90);
+          const currentGap = Math.max(this.gapSize - Math.min(score * 1.2, 35), 120);
+
+          this.spawnTimer += dt;
+          if (this.spawnTimer >= this.spawnInterval) {
+            this.spawnTimer = 0;
+            this.createObstacle(currentGap);
+          }
+
+          for (let i = this.obstacles.length - 1; i >= 0; i--) {
+            const obs = this.obstacles[i];
+            obs.x -= currentSpeed * dt;
+
+            // Checagem de pontuação (quando o centro do obstáculo passa pelo jogador)
+            if (!obs.passed && obs.x + obs.width < player.x) {
+              obs.passed = true;
+              score++;
+              hudCurrentScore.innerText = score;
+              sfx.playScore();
+
+              // Efeito de destaque no placar
+              hudCurrentScore.style.transform = 'scale(1.3)';
+              setTimeout(() => {
+                hudCurrentScore.style.transform = 'scale(1)';
+              }, 120);
+            }
+
+            // Remove obstáculos fora da tela
+            if (obs.x + obs.width < -50) {
+              this.obstacles.splice(i, 1);
+            }
+          }
+        },
+
+        createObstacle(gap) {
+          const minHeight = 70;
+          const availableHeight = height - gap - minHeight * 2;
+          const topHeight = minHeight + Math.random() * availableHeight;
+          const bottomY = topHeight + gap;
+
+          this.obstacles.push({
+            x: width + 20,
+            width: this.pillarWidth,
+            topHeight: topHeight,
+            bottomY: bottomY,
+            bottomHeight: height - bottomY,
+            passed: false,
+            pulseTime: Math.random() * Math.PI
+          });
+        },
+
+        render(ctx, time) {
+          for (const obs of this.obstacles) {
+            // Desenho do Pilar Superior
+            this.drawPillar(ctx, obs.x, 0, obs.width, obs.topHeight, true, time);
+            // Desenho do Pilar Inferior
+            this.drawPillar(ctx, obs.x, obs.bottomY, obs.width, obs.bottomHeight, false, time);
+
+            // Feixe de energia no vão (sutil e decorativo)
+            ctx.save();
+            ctx.strokeStyle = 'rgba(0, 240, 255, 0.15)';
+            ctx.lineWidth = 2;
+            ctx.beginPath();
+            ctx.moveTo(obs.x + obs.width / 2, obs.topHeight);
+            ctx.lineTo(obs.x + obs.width / 2, obs.bottomY);
+            ctx.stroke();
+            ctx.restore();
+          }
+        },
+
+        drawPillar(ctx, x, y, w, h, isTop, time) {
+          if (h <= 0) return;
+
+          ctx.save();
+
+          // Gradiente do corpo da coluna
+          const bodyGrad = ctx.createLinearGradient(x, 0, x + w, 0);
+          bodyGrad.addColorStop(0, '#0f172a');
+          bodyGrad.addColorStop(0.3, '#1e293b');
+          bodyGrad.addColorStop(0.7, '#334155');
+          bodyGrad.addColorStop(1, '#0f172a');
+
+          ctx.fillStyle = bodyGrad;
+          ctx.fillRect(x, y, w, h);
+
+          // Borda de plasma neon
+          ctx.shadowColor = '#00f0ff';
+          ctx.shadowBlur = 10;
+          ctx.strokeStyle = '#00f0ff';
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x, y, w, h);
+
+          // Terminal do Pilar (Capitular futurista)
+          const capHeight = 24;
+          const capWidth = w + 12;
+          const capX = x - 6;
+          const capY = isTop ? (h - capHeight) : y;
+
+          const capGrad = ctx.createLinearGradient(capX, 0, capX + capWidth, 0);
+          capGrad.addColorStop(0, '#0284c7');
+          capGrad.addColorStop(0.5, '#38bdf8');
+          capGrad.addColorStop(1, '#0284c7');
+
+          ctx.fillStyle = capGrad;
+          ctx.fillRect(capX, capY, capWidth, capHeight);
+
+          // Luz de advertência pulsante na ponta
+          const pulse = (Math.sin(time * 6) + 1) * 0.5;
+          ctx.fillStyle = `rgba(236, 72, 153, ${0.4 + pulse * 0.6})`;
+          ctx.shadowColor = '#ec4899';
+          ctx.shadowBlur = 12;
+          const bulbY = isTop ? capY + 4 : capY + capHeight - 4;
+          ctx.beginPath();
+          ctx.arc(x + w / 2, bulbY, 5, 0, Math.PI * 2);
+          ctx.fill();
+
+          ctx.restore();
+        }
+      };
+
+      // 3. Fundo Espacial com Parallax (Estrelas, Grade e Nebulosas)
+      const background = {
+        stars: [],
+        starCount: 60,
+
+        init() {
+          this.stars = [];
+          for (let i = 0; i < this.starCount; i++) {
+            this.stars.push({
+              x: Math.random() * width,
+              y: Math.random() * height,
+              radius: Math.random() * 1.8 + 0.4,
+              speed: Math.random() * 45 + 15,
+              alpha: Math.random() * 0.8 + 0.2
+            });
+          }
+        },
+
+        update(dt) {
+          for (const s of this.stars) {
+            s.x -= s.speed * dt;
+            if (s.x < -5) {
+              s.x = width + 5;
+              s.y = Math.random() * height;
+            }
+          }
+        },
+
+        render(ctx) {
+          // Gradiente cósmico de fundo
+          const bgGrad = ctx.createLinearGradient(0, 0, 0, height);
+          bgGrad.addColorStop(0, '#030712');
+          bgGrad.addColorStop(0.5, '#0b0f19');
+          bgGrad.addColorStop(1, '#030712');
+          ctx.fillStyle = bgGrad;
+          ctx.fillRect(0, 0, width, height);
+
+          // Nebulosa sutil
+          const radial = ctx.createRadialGradient(width * 0.7, height * 0.3, 10, width * 0.7, height * 0.3, width * 0.8);
+          radial.addColorStop(0, 'rgba(168, 85, 247, 0.12)');
+          radial.addColorStop(0.6, 'rgba(0, 240, 255, 0.05)');
+          radial.addColorStop(1, 'transparent');
+          ctx.fillStyle = radial;
+          ctx.fillRect(0, 0, width, height);
+
+          // Estrelas
+          ctx.save();
+          for (const s of this.stars) {
+            ctx.fillStyle = `rgba(255, 255, 255, ${s.alpha})`;
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, s.radius, 0, Math.PI * 2);
+            ctx.fill();
+          }
+          ctx.restore();
+
+          // Chão de barreira de força na base
+          ctx.save();
+          const floorY = height - 12;
+          ctx.fillStyle = '#0f172a';
+          ctx.fillRect(0, floorY, width, 12);
+          ctx.strokeStyle = '#00f0ff';
+          ctx.lineWidth = 2;
+          ctx.shadowColor = '#00f0ff';
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.moveTo(0, floorY);
+          ctx.lineTo(width, floorY);
+          ctx.stroke();
+          ctx.restore();
+        }
+      };
+
+      // -------------------------------------------------------------
+      // DETECÇÃO DE COLISÃO
+      // -------------------------------------------------------------
+      function checkCollision() {
+        // Colisão com teto ou piso
+        if (player.y - player.radius <= 0 || player.y + player.radius >= height - 12) {
+          return true;
+        }
+
+        // Colisão com obstáculos
+        for (const obs of obstacleManager.obstacles) {
+          // Caixa do pilar superior: [obs.x, 0, obs.width, obs.topHeight]
+          if (circleRectCollision(player.x, player.y, player.radius * 0.85, obs.x - 4, 0, obs.width + 8, obs.topHeight)) {
+            return true;
+          }
+          // Caixa do pilar inferior: [obs.x, obs.bottomY, obs.width, obs.bottomHeight]
+          if (circleRectCollision(player.x, player.y, player.radius * 0.85, obs.x - 4, obs.bottomY, obs.width + 8, obs.bottomHeight)) {
+            return true;
+          }
+        }
+
+        return false;
+      }
+
+      function circleRectCollision(cx, cy, r, rx, ry, rw, rh) {
+        const closestX = Math.max(rx, Math.min(cx, rx + rw));
+        const closestY = Math.max(ry, Math.min(cy, ry + rh));
+        const distX = cx - closestX;
+        const distY = cy - closestY;
+        return (distX * distX + distY * distY) < (r * r);
+      }
+
+      // -------------------------------------------------------------
+      // FLUXO DO JOGO
+      // -------------------------------------------------------------
+      function handleAction() {
+        if (gameState === 'START') {
+          startGame();
+        } else if (gameState === 'PLAYING') {
+          player.jump();
+        } else if (gameState === 'GAMEOVER') {
+          // Na tela de Game Over, reinicia apenas se clicar no botão específico
+        }
+      }
+
+      function startGame() {
+        sfx.init();
+        gameState = 'PLAYING';
+        score = 0;
+        isNewRecord = false;
+        scoreAlreadySaved = false;
+        hudCurrentScore.innerText = '0';
+        newRecordAlert.style.display = 'none';
+
+        startScreen.classList.add('hidden');
+        gameoverScreen.classList.add('hidden');
+
+        player.reset();
+        obstacleManager.reset();
+        player.jump();
+      }
+
+      function gameOver() {
+        gameState = 'GAMEOVER';
+        sfx.playCrash();
+
+        if (score > bestScore) {
+          bestScore = score;
+          localStorage.setItem('antigravity_best', bestScore.toString());
+          isNewRecord = true;
+          newRecordAlert.style.display = 'inline-block';
+          sfx.playRecord();
+        } else {
+          newRecordAlert.style.display = 'none';
+        }
+
+        gameoverScoreText.innerText = score;
+        gameoverBestText.innerText = bestScore;
+
+        saveScoreBtn.disabled = false;
+        saveScoreBtn.innerText = 'Salvar';
+
+        gameoverScreen.classList.remove('hidden');
+        loadLeaderboards();
+      }
+
+      // -------------------------------------------------------------
+      // LEADERBOARD / PLACAR
+      // -------------------------------------------------------------
+      async function loadLeaderboards() {
+        if (!window.LeaderboardService) return;
+        try {
+          const scores = await window.LeaderboardService.getTopScores();
+          renderLeaderboardList(startLeaderboardList, scores);
+          renderLeaderboardList(gameoverLeaderboardList, scores);
+        } catch (e) {
+          console.warn("Erro ao renderizar ranking:", e);
+        }
+      }
+
+      function renderLeaderboardList(ulElement, scores) {
+        if (!ulElement) return;
+        if (!scores || scores.length === 0) {
+          ulElement.innerHTML = '<li class="leaderboard-item">Nenhum recorde registrado ainda. Seja o primeiro!</li>';
+          return;
+        }
+
+        ulElement.innerHTML = scores.map((item, index) => {
+          const medal = index === 0 ? '🥇 ' : index === 1 ? '🥈 ' : index === 2 ? '🥉 ' : `#${index + 1} `;
+          const name = escapeHtml(item.name || 'Piloto');
+          return `
+            <li class="leaderboard-item">
+              <span><strong>${medal}</strong> ${name}</span>
+              <span><strong>${item.score}</strong> pts</span>
+            </li>
+          `;
+        }).join('');
+      }
+
+      function escapeHtml(str) {
+        const div = document.createElement('div');
+        div.innerText = str;
+        return div.innerHTML;
+      }
+
+      async function savePlayerScore() {
+        const name = playerNameInput.value.trim() || 'Piloto';
+        localStorage.setItem('antigravity_player_name', name);
+
+        saveScoreBtn.disabled = true;
+        saveScoreBtn.innerText = 'Gravando...';
+
+        if (window.LeaderboardService) {
+          await window.LeaderboardService.saveScore(name, score);
+          saveScoreBtn.innerText = 'Salvo! ✔';
+          scoreAlreadySaved = true;
+          await loadLeaderboards();
+        }
+      }
+
+      // -------------------------------------------------------------
+      // LOOP PRINCIPAL
+      // -------------------------------------------------------------
+      function gameLoop(timestamp) {
+        if (!lastTime) lastTime = timestamp;
+        const dt = Math.min((timestamp - lastTime) / 1000, 0.1);
+        lastTime = timestamp;
+
+        // Atualização
+        background.update(dt);
+
+        if (gameState === 'PLAYING') {
+          player.update(dt);
+          obstacleManager.update(dt);
+
+          if (checkCollision()) {
+            gameOver();
+          }
+        } else if (gameState === 'START') {
+          // Movimento de flutuação senoidal suave na tela inicial
+          player.y = (height * 0.45) + Math.sin(timestamp * 0.004) * 12;
+          player.velocity = 0;
+          player.angle = Math.sin(timestamp * 0.003) * 0.1;
+        }
+
+        // Renderização
+        ctx.clearRect(0, 0, width, height);
+        background.render(ctx);
+        obstacleManager.render(ctx, timestamp * 0.001);
+        player.render(ctx);
+
+        requestAnimationFrame(gameLoop);
+      }
+
+      // -------------------------------------------------------------
+      // AJUSTE DE TELA (RESIZE)
+      // -------------------------------------------------------------
+      function resize() {
+        const rect = container.getBoundingClientRect();
+        const dpr = window.devicePixelRatio || 1;
+
+        width = rect.width;
+        height = rect.height;
+
+        canvas.width = width * dpr;
+        canvas.height = height * dpr;
+
+        ctx.resetTransform();
+        ctx.scale(dpr, dpr);
+
+        background.init();
+        if (gameState === 'START') {
+          player.reset();
+        }
+      }
+
+      // -------------------------------------------------------------
+      // EVENT LISTENERS
+      // -------------------------------------------------------------
+      window.addEventListener('resize', resize);
+
+      // Clique / Toque no Canvas
+      canvas.addEventListener('pointerdown', (e) => {
+        e.preventDefault();
+        handleAction();
+      });
+
+      // Teclado
+      window.addEventListener('keydown', (e) => {
+        if (e.code === 'Space' || e.code === 'ArrowUp' || e.key === 'w' || e.key === 'W') {
+          e.preventDefault();
+          handleAction();
+        }
+      });
+
+      // Botões da UI
+      startGameBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        startGame();
+      });
+
+      restartGameBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        startGame();
+      });
+
+      saveScoreBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        savePlayerScore();
+      });
+
+      soundBtn.addEventListener('click', (e) => {
+        e.stopPropagation();
+        sfx.init();
+        const isMuted = sfx.toggleMute();
+        soundBtn.innerText = isMuted ? '🔇' : '🔊';
+      });
+
+      window.addEventListener('leaderboard-ready', () => {
+        loadLeaderboards();
+      });
+
+      // Inicialização Inicial
+      resize();
+      player.reset();
+      loadLeaderboards();
+      requestAnimationFrame(gameLoop);
+    })();
+  </script>
+</body>
+</html>
