@@ -428,11 +428,48 @@
       background: rgba(255, 255, 255, 0.2);
       border-radius: 4px;
     }
+
+    /* Banner de Alerta de Fases / Nível */
+    .level-banner {
+      position: absolute;
+      top: 85px;
+      left: 50%;
+      transform: translateX(-50%) translateY(-20px);
+      background: rgba(15, 23, 42, 0.94);
+      border: 1px solid var(--cyan-neon);
+      box-shadow: 0 0 20px rgba(0, 240, 255, 0.4);
+      color: #ffffff;
+      padding: 8px 18px;
+      border-radius: 30px;
+      font-size: 12px;
+      font-weight: 800;
+      letter-spacing: 1px;
+      text-transform: uppercase;
+      pointer-events: none;
+      opacity: 0;
+      transition: all 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+      z-index: 15;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      white-space: nowrap;
+    }
+    .level-banner.show {
+      opacity: 1;
+      transform: translateX(-50%) translateY(0);
+    }
+    .level-banner.warning {
+      border-color: #ef4444;
+      box-shadow: 0 0 20px rgba(239, 68, 68, 0.5);
+    }
   </style>
 </head>
 <body>
 
   <div id="game-container">
+    <!-- Banner de Alerta de Desafio -->
+    <div id="level-alert" class="level-banner"></div>
+
     <!-- Canvas de Renderização do Jogo -->
     <canvas id="game-canvas"></canvas>
 
@@ -459,16 +496,24 @@
       <div class="card">
         <ul class="instruction-list">
           <li>
-            <span>👆</span>
-            <div><strong>Clique</strong> ou <strong>Toque</strong> na tela para ativar o propulsor de antigravidade.</div>
+            <span>🚀</span>
+            <div><strong>Nave Espacial Quântica</strong>: Clique ou toque para acionar os propulsores iônicos.</div>
           </li>
           <li>
             <span class="key">ESPAÇO</span>
-            <div>Também funciona com a barra de espaço ou tecla <span class="key">▲</span>.</div>
+            <div>Use a barra de espaço, clique do mouse ou toque na tela para pilotar.</div>
           </li>
           <li>
             <span>⚡</span>
-            <div>Evite as colunas de plasma gravitacional e quebre recordes!</div>
+            <div><strong>Velocidade Progressiva</strong>: Os propulsores aumentam a velocidade conforme sua pontuação!</div>
+          </li>
+          <li>
+            <span>🛸</span>
+            <div><strong>Score 20+</strong>: Os pilares começam a se mover para cima e para baixo aleatoriamente!</div>
+          </li>
+          <li>
+            <span>⚠️</span>
+            <div><strong>Score 30+</strong>: Portais compactadores podem se fechar lentamente!</div>
           </li>
         </ul>
 
@@ -481,7 +526,7 @@
       </div>
 
       <button class="btn-action" id="start-game-btn">
-        <span>INICIAR MISSÃO</span>
+        <span>INICIAR VOO DA NAVE</span>
         <span>🚀</span>
       </button>
     </div>
@@ -776,19 +821,31 @@
       const cachedName = localStorage.getItem('antigravity_player_name') || '';
       if (cachedName) playerNameInput.value = cachedName;
 
+      // Banner helper para avisos visuais de fases
+      function showLevelBanner(text, isWarning = false) {
+        const el = document.getElementById('level-alert');
+        if (!el) return;
+        el.innerText = text;
+        el.className = 'level-banner show' + (isWarning ? ' warning' : '');
+        setTimeout(() => {
+          el.className = 'level-banner';
+        }, 2800);
+      }
+
       // -------------------------------------------------------------
       // ENTIDADES DO JOGO
       // -------------------------------------------------------------
 
-      // 1. O Jogador (Sonda Antigravitacional)
+      // 1. O Jogador (Nave Espacial Quântica Interceptora)
       const player = {
         x: 0,
         y: 0,
-        radius: 18,
+        radius: 14,         // Hitbox calibrada para passagem precisa
         velocity: 0,
-        gravity: 1200,      // pixels/s²
-        jumpImpulse: -420,  // impulso ascendente
+        gravity: 1180,      // Gravidade contínua suave
+        jumpImpulse: -410,  // Impulso do salto para cima
         angle: 0,
+        thrustTime: 0,      // Turbo de propulsão visual
         particles: [],
 
         reset() {
@@ -796,25 +853,27 @@
           this.y = height * 0.45;
           this.velocity = 0;
           this.angle = 0;
+          this.thrustTime = 0;
           this.particles = [];
         },
 
         jump() {
           sfx.init();
           this.velocity = this.jumpImpulse;
+          this.thrustTime = 0.28; // ativa visual do pós-combustor iônico
           sfx.playFlap();
 
-          // Emite partículas de propulsão iônica
-          for (let i = 0; i < 8; i++) {
+          // Emite partículas de exaustão de plasma para trás
+          for (let i = 0; i < 9; i++) {
             this.particles.push({
-              x: this.x - this.radius * 0.8,
-              y: this.y + (Math.random() * 8 - 4),
-              vx: - (Math.random() * 120 + 80),
-              vy: (Math.random() * 100 - 50),
-              radius: Math.random() * 4 + 2,
-              color: Math.random() > 0.5 ? '#00f0ff' : '#a855f7',
+              x: this.x - 16,
+              y: this.y + (Math.random() * 6 - 3),
+              vx: -(Math.random() * 140 + 90),
+              vy: (Math.random() * 80 - 40),
+              radius: Math.random() * 3.5 + 2,
+              color: Math.random() > 0.4 ? '#00f0ff' : '#ec4899',
               alpha: 1,
-              life: 0.4
+              life: 0.38
             });
           }
         },
@@ -823,9 +882,13 @@
           this.velocity += this.gravity * dt;
           this.y += this.velocity * dt;
 
-          // Rotação suave baseada na velocidade
-          const targetAngle = Math.min(Math.max(this.velocity * 0.0018, -0.6), 0.9);
-          this.angle += (targetAngle - this.angle) * 10 * dt;
+          if (this.thrustTime > 0) {
+            this.thrustTime = Math.max(0, this.thrustTime - dt);
+          }
+
+          // Rotação suave acompanhando a inclinação da nave
+          const targetAngle = Math.min(Math.max(this.velocity * 0.0016, -0.55), 0.85);
+          this.angle += (targetAngle - this.angle) * 11 * dt;
 
           // Atualiza partículas
           for (let i = this.particles.length - 1; i >= 0; i--) {
@@ -838,23 +901,23 @@
             }
           }
 
-          // Rastro contínuo tênue
-          if (Math.random() > 0.4) {
+          // Rastro contínuo da turbina
+          if (Math.random() > 0.35) {
             this.particles.push({
-              x: this.x - this.radius * 0.9,
-              y: this.y,
-              vx: -(Math.random() * 50 + 20),
+              x: this.x - 14,
+              y: this.y + (Math.random() * 4 - 2),
+              vx: -(Math.random() * 60 + 30),
               vy: (Math.random() * 20 - 10),
               radius: Math.random() * 2 + 1,
-              color: '#00f0ff',
-              alpha: 0.6,
+              color: this.thrustTime > 0 ? '#38bdf8' : '#a855f7',
+              alpha: 0.7,
               life: 0.25
             });
           }
         },
 
         render(ctx) {
-          // Renderiza partículas
+          // Renderiza partículas de propulsão
           for (const p of this.particles) {
             ctx.save();
             ctx.globalAlpha = Math.max(0, p.alpha);
@@ -869,56 +932,102 @@
           ctx.translate(this.x, this.y);
           ctx.rotate(this.angle);
 
-          // Brilho exterior (glow)
-          ctx.shadowColor = '#00f0ff';
-          ctx.shadowBlur = 18;
+          // 1. Turbina e Fogo do Motor Traseiro (Plasma Dinâmico)
+          const flameLen = this.thrustTime > 0 ? 20 + Math.random() * 8 : 9 + Math.random() * 4;
+          const flameGrad = ctx.createLinearGradient(-12, 0, -12 - flameLen, 0);
+          flameGrad.addColorStop(0, '#ffffff');
+          flameGrad.addColorStop(0.3, '#00f0ff');
+          flameGrad.addColorStop(0.7, '#ec4899');
+          flameGrad.addColorStop(1, 'transparent');
 
-          // Corpo principal (Orbe de levitação tecnológica)
-          const grad = ctx.createLinearGradient(-this.radius, -this.radius, this.radius, this.radius);
-          grad.addColorStop(0, '#ffffff');
-          grad.addColorStop(0.4, '#00f0ff');
-          grad.addColorStop(1, '#0284c7');
-
-          ctx.fillStyle = grad;
+          ctx.fillStyle = flameGrad;
           ctx.beginPath();
-          ctx.arc(0, 0, this.radius, 0, Math.PI * 2);
+          ctx.moveTo(-11, -4);
+          ctx.lineTo(-11 - flameLen, 0);
+          ctx.lineTo(-11, 4);
+          ctx.closePath();
           ctx.fill();
 
-          // Anel de contenção gravitacional
-          ctx.shadowBlur = 0;
-          ctx.strokeStyle = '#a855f7';
-          ctx.lineWidth = 3;
+          // 2. Asas Delta da Nave Espacial
+          ctx.shadowColor = '#00f0ff';
+          ctx.shadowBlur = 12;
+
+          const wingGrad = ctx.createLinearGradient(-10, -18, 10, 18);
+          wingGrad.addColorStop(0, '#0f172a');
+          wingGrad.addColorStop(0.4, '#1e293b');
+          wingGrad.addColorStop(1, '#0284c7');
+
+          ctx.fillStyle = wingGrad;
+          ctx.strokeStyle = '#00f0ff';
+          ctx.lineWidth = 1.5;
+
           ctx.beginPath();
-          ctx.ellipse(0, 0, this.radius + 3, this.radius * 0.45, Math.PI / 4, 0, Math.PI * 2);
+          ctx.moveTo(-6, -17);  // asa esquerda ponta
+          ctx.lineTo(8, -6);
+          ctx.lineTo(20, 0);    // bico dianteiro
+          ctx.lineTo(8, 6);
+          ctx.lineTo(-6, 17);   // asa direita ponta
+          ctx.lineTo(-13, 10);
+          ctx.lineTo(-10, 0);   // cauda central
+          ctx.lineTo(-13, -10);
+          ctx.closePath();
+          ctx.fill();
           ctx.stroke();
 
-          // Núcleo luminoso
-          ctx.fillStyle = '#ffffff';
+          // 3. Luzes de navegação neon nas pontas das asas
+          ctx.shadowColor = '#ec4899';
+          ctx.shadowBlur = 8;
+          ctx.fillStyle = '#ec4899';
           ctx.beginPath();
-          ctx.arc(this.radius * 0.3, -this.radius * 0.3, this.radius * 0.35, 0, Math.PI * 2);
+          ctx.arc(-6, -16, 2.2, 0, Math.PI * 2);
+          ctx.arc(-6, 16, 2.2, 0, Math.PI * 2);
           ctx.fill();
 
-          // Olho/Sensor frontal futurista
-          ctx.fillStyle = '#0f172a';
+          // 4. Fuselagem Central Aerodinâmica
+          ctx.shadowBlur = 0;
+          const bodyGrad = ctx.createLinearGradient(-8, 0, 18, 0);
+          bodyGrad.addColorStop(0, '#334155');
+          bodyGrad.addColorStop(0.6, '#f8fafc');
+          bodyGrad.addColorStop(1, '#38bdf8');
+
+          ctx.fillStyle = bodyGrad;
           ctx.beginPath();
-          ctx.arc(this.radius * 0.45, 0, this.radius * 0.28, 0, Math.PI * 2);
+          ctx.moveTo(-8, -5);
+          ctx.lineTo(21, 0); // bico
+          ctx.lineTo(-8, 5);
+          ctx.lineTo(-11, 0);
+          ctx.closePath();
           ctx.fill();
-          ctx.fillStyle = '#f43f5e';
+
+          // 5. Cockpit de Vidro / Cúpula Futurista
+          const glassGrad = ctx.createLinearGradient(0, -3, 10, 3);
+          glassGrad.addColorStop(0, '#ffffff');
+          glassGrad.addColorStop(0.4, '#00f0ff');
+          glassGrad.addColorStop(1, '#0284c7');
+
+          ctx.fillStyle = glassGrad;
           ctx.beginPath();
-          ctx.arc(this.radius * 0.52, 0, this.radius * 0.12, 0, Math.PI * 2);
+          ctx.ellipse(3, 0, 7, 3.2, 0, 0, Math.PI * 2);
           ctx.fill();
+
+          // Reflexo no vidro do cockpit
+          ctx.strokeStyle = '#ffffff';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.ellipse(4, -1, 4, 1.2, -0.2, 0, Math.PI);
+          ctx.stroke();
 
           ctx.restore();
         }
       };
 
-      // 2. Obstáculos (Pilares de Plasma Gravitacional)
+      // 2. Obstáculos (Pilares de Plasma com Dificuldade Dinâmica)
       const obstacleManager = {
         obstacles: [],
         spawnTimer: 0,
-        spawnInterval: 1.8, // segundos entre cada par de pilares
-        baseSpeed: 170,     // pixels/s
-        gapSize: 155,       // vão entre os pilares
+        spawnInterval: 1.8,
+        baseSpeed: 165,     // Velocidade base inicial
+        gapSize: 155,       // Vão padrão
         pillarWidth: 64,
 
         reset() {
@@ -927,19 +1036,50 @@
         },
 
         update(dt) {
-          // Ajusta sutilmente a dificuldade com a pontuação
-          const currentSpeed = this.baseSpeed + Math.min(score * 3.5, 90);
-          const currentGap = Math.max(this.gapSize - Math.min(score * 1.2, 35), 120);
+          // REGRA 1: Velocidade aumenta progressivamente com a pontuação
+          const currentSpeed = Math.min(this.baseSpeed + (score * 4.5), 380);
+          // Cadência ajustada para manter distâncias justas em velocidades maiores
+          this.spawnInterval = Math.max(1.75 - (score * 0.015), 1.15);
 
           this.spawnTimer += dt;
           if (this.spawnTimer >= this.spawnInterval) {
             this.spawnTimer = 0;
-            this.createObstacle(currentGap);
+            this.createObstacle();
           }
 
           for (let i = this.obstacles.length - 1; i >= 0; i--) {
             const obs = this.obstacles[i];
             obs.x -= currentSpeed * dt;
+
+            // REGRA 2: A partir de 20 pontos, os obstáculos se movem para cima e para baixo aleatoriamente
+            if (obs.isMovingVertical) {
+              obs.topHeight += obs.verticalSpeed * dt;
+              obs.bottomY += obs.verticalSpeed * dt;
+
+              const minH = 45;
+              const maxTopH = height - obs.gap - 45;
+
+              if (obs.topHeight <= minH) {
+                obs.topHeight = minH;
+                obs.bottomY = obs.topHeight + obs.gap;
+                obs.verticalSpeed = Math.abs(obs.verticalSpeed);
+              } else if (obs.topHeight >= maxTopH) {
+                obs.topHeight = maxTopH;
+                obs.bottomY = obs.topHeight + obs.gap;
+                obs.verticalSpeed = -Math.abs(obs.verticalSpeed);
+              }
+              obs.bottomHeight = height - obs.bottomY;
+            }
+
+            // REGRA 3: A partir de 30 pontos, os obstáculos podem fechar lentamente, mas de forma aleatória
+            if (obs.isClosing && obs.gap > obs.minGap) {
+              const shrink = obs.closeSpeed * dt;
+              obs.gap = Math.max(obs.minGap, obs.gap - shrink);
+              // Fecha ambas as extremidades em direção ao centro do vão
+              obs.topHeight += shrink * 0.5;
+              obs.bottomY -= shrink * 0.5;
+              obs.bottomHeight = height - obs.bottomY;
+            }
 
             // Checagem de pontuação (quando o centro do obstáculo passa pelo jogador)
             if (!obs.passed && obs.x + obs.width < player.x) {
@@ -947,6 +1087,15 @@
               score++;
               hudCurrentScore.innerText = score;
               sfx.playScore();
+
+              // Alertas visuais e sonoros ao alcançar os marcos de 20 e 30
+              if (score === 20) {
+                showLevelBanner('🛸 FASE 2: PILARES OSCILANTES!');
+                sfx.playRecord();
+              } else if (score === 30) {
+                showLevelBanner('⚠️ FASE 3: PORTAIS COMPACTADORES!', true);
+                sfx.playRecord();
+              }
 
               // Efeito de destaque no placar
               hudCurrentScore.style.transform = 'scale(1.3)';
@@ -956,24 +1105,40 @@
             }
 
             // Remove obstáculos fora da tela
-            if (obs.x + obs.width < -50) {
+            if (obs.x + obs.width < -60) {
               this.obstacles.splice(i, 1);
             }
           }
         },
 
-        createObstacle(gap) {
-          const minHeight = 70;
-          const availableHeight = height - gap - minHeight * 2;
+        createObstacle() {
+          const baseGap = Math.max(this.gapSize - Math.min(score * 1.1, 30), 125);
+          const minHeight = 55;
+          const availableHeight = height - baseGap - minHeight * 2;
           const topHeight = minHeight + Math.random() * availableHeight;
-          const bottomY = topHeight + gap;
+          const bottomY = topHeight + baseGap;
+
+          // A partir de 20 pontos: oscilação vertical aleatória
+          const isMovingVertical = score >= 20 && Math.random() < 0.85;
+          const verticalSpeed = isMovingVertical ? (Math.random() * 45 + 35) * (Math.random() > 0.5 ? 1 : -1) : 0;
+
+          // A partir de 30 pontos: fechamento lento aleatório
+          const isClosing = score >= 30 && Math.random() < 0.65;
+          const closeSpeed = isClosing ? (Math.random() * 14 + 10) : 0; // 10 a 24 px/s
+          const minGap = 96; // vão mínimo seguro para nave
 
           this.obstacles.push({
             x: width + 20,
             width: this.pillarWidth,
+            gap: baseGap,
             topHeight: topHeight,
             bottomY: bottomY,
             bottomHeight: height - bottomY,
+            isMovingVertical: isMovingVertical,
+            verticalSpeed: verticalSpeed,
+            isClosing: isClosing,
+            closeSpeed: closeSpeed,
+            minGap: minGap,
             passed: false,
             pulseTime: Math.random() * Math.PI
           });
@@ -982,14 +1147,27 @@
         render(ctx, time) {
           for (const obs of this.obstacles) {
             // Desenho do Pilar Superior
-            this.drawPillar(ctx, obs.x, 0, obs.width, obs.topHeight, true, time);
+            this.drawPillar(ctx, obs.x, 0, obs.width, obs.topHeight, true, time, obs);
             // Desenho do Pilar Inferior
-            this.drawPillar(ctx, obs.x, obs.bottomY, obs.width, obs.bottomHeight, false, time);
+            this.drawPillar(ctx, obs.x, obs.bottomY, obs.width, obs.bottomHeight, false, time, obs);
 
-            // Feixe de energia no vão (sutil e decorativo)
+            // Feixe de energia no vão com feedback visual de perigo
             ctx.save();
-            ctx.strokeStyle = 'rgba(0, 240, 255, 0.15)';
-            ctx.lineWidth = 2;
+            if (obs.isClosing) {
+              // Vermelho pulsante para obstáculo que está fechando
+              const pulse = (Math.sin(time * 12) + 1) * 0.5;
+              ctx.strokeStyle = `rgba(239, 68, 68, ${0.3 + pulse * 0.4})`;
+              ctx.lineWidth = 2.5;
+              ctx.setLineDash([5, 5]);
+            } else if (obs.isMovingVertical) {
+              // Roxo oscilante para pilares flutuantes
+              ctx.strokeStyle = 'rgba(168, 85, 247, 0.35)';
+              ctx.lineWidth = 2;
+            } else {
+              ctx.strokeStyle = 'rgba(0, 240, 255, 0.18)';
+              ctx.lineWidth = 1.5;
+            }
+
             ctx.beginPath();
             ctx.moveTo(obs.x + obs.width / 2, obs.topHeight);
             ctx.lineTo(obs.x + obs.width / 2, obs.bottomY);
@@ -998,25 +1176,33 @@
           }
         },
 
-        drawPillar(ctx, x, y, w, h, isTop, time) {
+        drawPillar(ctx, x, y, w, h, isTop, time, obs) {
           if (h <= 0) return;
 
           ctx.save();
 
           // Gradiente do corpo da coluna
           const bodyGrad = ctx.createLinearGradient(x, 0, x + w, 0);
-          bodyGrad.addColorStop(0, '#0f172a');
+          bodyGrad.addColorStop(0, '#0a0f1d');
           bodyGrad.addColorStop(0.3, '#1e293b');
           bodyGrad.addColorStop(0.7, '#334155');
-          bodyGrad.addColorStop(1, '#0f172a');
+          bodyGrad.addColorStop(1, '#0a0f1d');
 
           ctx.fillStyle = bodyGrad;
           ctx.fillRect(x, y, w, h);
 
+          // Cor do contorno de acordo com o tipo de obstáculo
+          let neonColor = '#00f0ff';
+          if (obs && obs.isClosing) {
+            neonColor = '#ef4444'; // vermelho de perigo (compactador)
+          } else if (obs && obs.isMovingVertical) {
+            neonColor = '#a855f7'; // roxo oscilante
+          }
+
           // Borda de plasma neon
-          ctx.shadowColor = '#00f0ff';
+          ctx.shadowColor = neonColor;
           ctx.shadowBlur = 10;
-          ctx.strokeStyle = '#00f0ff';
+          ctx.strokeStyle = neonColor;
           ctx.lineWidth = 2;
           ctx.strokeRect(x, y, w, h);
 
@@ -1027,17 +1213,25 @@
           const capY = isTop ? (h - capHeight) : y;
 
           const capGrad = ctx.createLinearGradient(capX, 0, capX + capWidth, 0);
-          capGrad.addColorStop(0, '#0284c7');
-          capGrad.addColorStop(0.5, '#38bdf8');
-          capGrad.addColorStop(1, '#0284c7');
+          if (obs && obs.isClosing) {
+            capGrad.addColorStop(0, '#991b1b');
+            capGrad.addColorStop(0.5, '#f87171');
+            capGrad.addColorStop(1, '#991b1b');
+          } else {
+            capGrad.addColorStop(0, '#0284c7');
+            capGrad.addColorStop(0.5, '#38bdf8');
+            capGrad.addColorStop(1, '#0284c7');
+          }
 
           ctx.fillStyle = capGrad;
           ctx.fillRect(capX, capY, capWidth, capHeight);
 
           // Luz de advertência pulsante na ponta
-          const pulse = (Math.sin(time * 6) + 1) * 0.5;
-          ctx.fillStyle = `rgba(236, 72, 153, ${0.4 + pulse * 0.6})`;
-          ctx.shadowColor = '#ec4899';
+          const pulseSpeed = (obs && obs.isClosing) ? 12 : 6;
+          const pulse = (Math.sin(time * pulseSpeed) + 1) * 0.5;
+          const bulbColor = (obs && obs.isClosing) ? `rgba(239, 68, 68, ${0.5 + pulse * 0.5})` : `rgba(236, 72, 153, ${0.4 + pulse * 0.6})`;
+          ctx.fillStyle = bulbColor;
+          ctx.shadowColor = (obs && obs.isClosing) ? '#ef4444' : '#ec4899';
           ctx.shadowBlur = 12;
           const bulbY = isTop ? capY + 4 : capY + capHeight - 4;
           ctx.beginPath();

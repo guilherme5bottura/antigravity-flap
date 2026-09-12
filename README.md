@@ -8,10 +8,11 @@
 
 ## 🕹️ Mecânica e Gameplay
 
-- **Controle Gravitacional**: Clique com o mouse, toque na tela (mobile) ou pressione `ESPAÇO` / `▲` / `W` para ativar os propulsores iônicos da sonda quântica.
-- **Gravidade Dinâmica**: A força da gravidade puxa a cápsula continuamente para baixo, exigindo controle do timing de impulsão.
-- **Colunas de Plasma**: Supere os obstáculos energéticos procedurais sem encostar nas barreiras de contenção.
-- **Progressão Fluida**: A velocidade e os vãos se ajustam sutilmente com o aumento do score para garantir desafio contínuo.
+- **Nave Espacial Quântica**: Assuma o comando de um caça interceptor com propulsão iônica. Clique com o mouse, toque na tela (mobile) ou pressione `ESPAÇO` / `▲` / `W` para ligar o pós-combustor e impulsionar a nave.
+- **Velocidade Progressiva**: Conforme a pontuação sobe, a velocidade de deslocamento dos propulsores acelera, testando os seus reflexos em níveis arcade cada vez mais intensos!
+- **🛸 Fase 2 (Score 20+) - Pilares Oscilantes**: Os pilares energéticos passam a se mover para cima e para baixo em trajetórias aleatórias pelo campo de jogo.
+- **⚠️ Fase 3 (Score 30+) - Portais Compactadores**: Alguns obstáculos entram em modo de contenção e se fecham lentamente conforme você se aproxima, exigindo timing de voo milimétrico.
+- **Física Gravitacional Suave**: A força da gravidade puxa a nave continuamente para baixo com rotação e inclinação dinâmica.
 
 ---
 
