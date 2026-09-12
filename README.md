@@ -8,8 +8,8 @@
 
 ## 🕹️ Mecânica e Gameplay
 
-- **Nave Espacial Quântica**: Assuma o comando de um caça interceptor com propulsão iônica. Clique com o mouse, toque na tela (mobile) ou pressione `ESPAÇO` / `▲` / `W` para ligar o pós-combustor e impulsionar a nave.
-- **Velocidade Progressiva**: Conforme a pontuação sobe, a velocidade de deslocamento dos propulsores acelera, testando os seus reflexos em níveis arcade cada vez mais intensos!
+- **🛸 Disco Voador Alienígena Clássico**: Assuma o comando do autêntico disco voador retrô dos filmes clássicos de ficção científica dos anos 50/60! A nave é redondinha, com cúpula de vidro transparente, piloto ET cabeçudo de olhos pretos, luzinhas circulares giratórias coloridas e feixe/raio abdutor de sustentação antigravitacional.
+- **⚡ Velocidade Progressiva**: Conforme a pontuação sobe, a velocidade de deslocamento dos propulsores acelera, testando os seus reflexos em níveis arcade cada vez mais intensos!
 - **🛸 Fase 2 (Score 20+) - Pilares Oscilantes**: Os pilares energéticos passam a se mover para cima e para baixo em trajetórias aleatórias pelo campo de jogo.
 - **⚠️ Fase 3 (Score 30+) - Portais Compactadores**: Alguns obstáculos entram em modo de contenção e se fecham lentamente conforme você se aproxima, exigindo timing de voo milimétrico.
 - **Física Gravitacional Suave**: A força da gravidade puxa a nave continuamente para baixo com rotação e inclinação dinâmica.

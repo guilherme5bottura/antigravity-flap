@@ -496,20 +496,20 @@
       <div class="card">
         <ul class="instruction-list">
           <li>
-            <span>🚀</span>
-            <div><strong>Nave Espacial Quântica</strong>: Clique ou toque para acionar os propulsores iônicos.</div>
+            <span>🛸</span>
+            <div><strong>Disco Voador Alienígena Clássico</strong>: Pilote a clássica nave redondinha de filme de ET com cúpula de vidro e luzes giratórias!</div>
           </li>
           <li>
             <span class="key">ESPAÇO</span>
-            <div>Use a barra de espaço, clique do mouse ou toque na tela para pilotar.</div>
+            <div>Use a barra de espaço, clique do mouse ou toque na tela para acionar o raio abdutor.</div>
           </li>
           <li>
             <span>⚡</span>
-            <div><strong>Velocidade Progressiva</strong>: Os propulsores aumentam a velocidade conforme sua pontuação!</div>
+            <div><strong>Velocidade Progressiva</strong>: A nave acelera continuamente conforme sua pontuação!</div>
           </li>
           <li>
-            <span>🛸</span>
-            <div><strong>Score 20+</strong>: Os pilares começam a se mover para cima e para baixo aleatoriamente!</div>
+            <span>👽</span>
+            <div><strong>Score 20+</strong>: Os pilares começam a oscilar verticalmente no espaço!</div>
           </li>
           <li>
             <span>⚠️</span>
@@ -526,8 +526,8 @@
       </div>
 
       <button class="btn-action" id="start-game-btn">
-        <span>INICIAR VOO DA NAVE</span>
-        <span>🚀</span>
+        <span>INICIAR VOO ALIENÍGENA</span>
+        <span>🛸</span>
       </button>
     </div>
 
@@ -836,16 +836,16 @@
       // ENTIDADES DO JOGO
       // -------------------------------------------------------------
 
-      // 1. O Jogador (Nave Espacial Quântica Interceptora)
+      // 1. O Jogador (Disco Voador Alienígena Clássico - Anos 50/60)
       const player = {
         x: 0,
         y: 0,
-        radius: 14,         // Hitbox calibrada para passagem precisa
+        radius: 14,         // Hitbox balanceada para o disco
         velocity: 0,
         gravity: 1180,      // Gravidade contínua suave
         jumpImpulse: -410,  // Impulso do salto para cima
         angle: 0,
-        thrustTime: 0,      // Turbo de propulsão visual
+        thrustTime: 0,      // Duração do pulso do raio abdutor
         particles: [],
 
         reset() {
@@ -860,18 +860,18 @@
         jump() {
           sfx.init();
           this.velocity = this.jumpImpulse;
-          this.thrustTime = 0.28; // ativa visual do pós-combustor iônico
+          this.thrustTime = 0.35; // ativa feixe abdutor de sustentação
           sfx.playFlap();
 
-          // Emite partículas de exaustão de plasma para trás
+          // Emite partículas de energia alienígena (esmeralda, ciano e âmbar)
           for (let i = 0; i < 9; i++) {
             this.particles.push({
-              x: this.x - 16,
-              y: this.y + (Math.random() * 6 - 3),
-              vx: -(Math.random() * 140 + 90),
-              vy: (Math.random() * 80 - 40),
-              radius: Math.random() * 3.5 + 2,
-              color: Math.random() > 0.4 ? '#00f0ff' : '#ec4899',
+              x: this.x + (Math.random() * 12 - 6),
+              y: this.y + 6,
+              vx: -(Math.random() * 80 + 30),
+              vy: (Math.random() * 80 + 30),
+              radius: Math.random() * 3 + 1.8,
+              color: Math.random() > 0.4 ? '#10b981' : (Math.random() > 0.5 ? '#00f0ff' : '#facc15'),
               alpha: 1,
               life: 0.38
             });
@@ -886,8 +886,8 @@
             this.thrustTime = Math.max(0, this.thrustTime - dt);
           }
 
-          // Rotação suave acompanhando a inclinação da nave
-          const targetAngle = Math.min(Math.max(this.velocity * 0.0016, -0.55), 0.85);
+          // Rotação suave baseada na velocidade vertical
+          const targetAngle = Math.min(Math.max(this.velocity * 0.0013, -0.45), 0.6);
           this.angle += (targetAngle - this.angle) * 11 * dt;
 
           // Atualiza partículas
@@ -901,23 +901,23 @@
             }
           }
 
-          // Rastro contínuo da turbina
-          if (Math.random() > 0.35) {
+          // Rastro contínuo tênue de antigravidade
+          if (Math.random() > 0.3) {
             this.particles.push({
-              x: this.x - 14,
-              y: this.y + (Math.random() * 4 - 2),
-              vx: -(Math.random() * 60 + 30),
-              vy: (Math.random() * 20 - 10),
+              x: this.x + (Math.random() * 10 - 5),
+              y: this.y + 7,
+              vx: -(Math.random() * 35 + 15),
+              vy: (Math.random() * 20 + 5),
               radius: Math.random() * 2 + 1,
-              color: this.thrustTime > 0 ? '#38bdf8' : '#a855f7',
+              color: this.thrustTime > 0 ? '#10b981' : '#38bdf8',
               alpha: 0.7,
-              life: 0.25
+              life: 0.28
             });
           }
         },
 
-        render(ctx) {
-          // Renderiza partículas de propulsão
+        render(ctx, time = (performance.now() * 0.001)) {
+          // Renderiza partículas do raio/propulsão
           for (const p of this.particles) {
             ctx.save();
             ctx.globalAlpha = Math.max(0, p.alpha);
@@ -930,93 +930,162 @@
 
           ctx.save();
           ctx.translate(this.x, this.y);
-          ctx.rotate(this.angle);
 
-          // 1. Turbina e Fogo do Motor Traseiro (Plasma Dinâmico)
-          const flameLen = this.thrustTime > 0 ? 20 + Math.random() * 8 : 9 + Math.random() * 4;
-          const flameGrad = ctx.createLinearGradient(-12, 0, -12 - flameLen, 0);
-          flameGrad.addColorStop(0, '#ffffff');
-          flameGrad.addColorStop(0.3, '#00f0ff');
-          flameGrad.addColorStop(0.7, '#ec4899');
-          flameGrad.addColorStop(1, 'transparent');
+          // Balanço (wobble) clássico de disco voador retro pairando no espaço
+          const wobble = Math.sin(time * 7.5) * 0.06;
+          ctx.rotate(this.angle + wobble);
 
-          ctx.fillStyle = flameGrad;
+          // 1. Feixe Trator / Raio Abdutor de Antigravidade (cônico para baixo ao pular)
+          if (this.thrustTime > 0) {
+            ctx.save();
+            const beamAlpha = Math.min(1, this.thrustTime / 0.25);
+            const beamGrad = ctx.createLinearGradient(0, 5, 0, 36);
+            beamGrad.addColorStop(0, `rgba(16, 185, 129, ${0.9 * beamAlpha})`);
+            beamGrad.addColorStop(0.4, `rgba(0, 240, 255, ${0.5 * beamAlpha})`);
+            beamGrad.addColorStop(1, 'transparent');
+
+            ctx.fillStyle = beamGrad;
+            ctx.beginPath();
+            ctx.moveTo(-6, 5);
+            ctx.lineTo(-18, 36);
+            ctx.lineTo(18, 36);
+            ctx.lineTo(6, 5);
+            ctx.closePath();
+            ctx.fill();
+            ctx.restore();
+          }
+
+          // 2. Base Inferior / Ventre Côncavo do Disco
+          ctx.save();
+          const baseGrad = ctx.createLinearGradient(0, 2, 0, 7);
+          baseGrad.addColorStop(0, '#334155');
+          baseGrad.addColorStop(1, '#0f172a');
+          ctx.fillStyle = baseGrad;
           ctx.beginPath();
-          ctx.moveTo(-11, -4);
-          ctx.lineTo(-11 - flameLen, 0);
-          ctx.lineTo(-11, 4);
-          ctx.closePath();
+          ctx.ellipse(0, 4.5, 13, 4, 0, 0, Math.PI * 2);
           ctx.fill();
 
-          // 2. Asas Delta da Nave Espacial
-          ctx.shadowColor = '#00f0ff';
+          // Emissor central inferior do feixe
+          const emitterColor = this.thrustTime > 0 ? '#10b981' : '#facc15';
+          ctx.fillStyle = emitterColor;
+          ctx.shadowColor = emitterColor;
+          ctx.shadowBlur = 10;
+          ctx.beginPath();
+          ctx.ellipse(0, 5.5, 6, 2, 0, 0, Math.PI * 2);
+          ctx.fill();
+          ctx.restore();
+
+          // 3. Disco Metálico Redondinho Principal (Prato Prateado Clássico)
+          ctx.save();
+          ctx.shadowColor = '#10b981';
           ctx.shadowBlur = 12;
 
-          const wingGrad = ctx.createLinearGradient(-10, -18, 10, 18);
-          wingGrad.addColorStop(0, '#0f172a');
-          wingGrad.addColorStop(0.4, '#1e293b');
-          wingGrad.addColorStop(1, '#0284c7');
+          // Gradiente metálico prateado estilo ficção científica anos 50
+          const saucerGrad = ctx.createLinearGradient(0, -6, 0, 6);
+          saucerGrad.addColorStop(0, '#ffffff');   // reflexo de luz superior
+          saucerGrad.addColorStop(0.3, '#cbd5e1'); // metal polido
+          saucerGrad.addColorStop(0.7, '#64748b');  // cinza grafite
+          saucerGrad.addColorStop(1, '#1e293b');    // sombra inferior
 
-          ctx.fillStyle = wingGrad;
-          ctx.strokeStyle = '#00f0ff';
-          ctx.lineWidth = 1.5;
+          ctx.fillStyle = saucerGrad;
+          ctx.strokeStyle = '#94a3b8';
+          ctx.lineWidth = 1.2;
 
           ctx.beginPath();
-          ctx.moveTo(-6, -17);  // asa esquerda ponta
-          ctx.lineTo(8, -6);
-          ctx.lineTo(20, 0);    // bico dianteiro
-          ctx.lineTo(8, 6);
-          ctx.lineTo(-6, 17);   // asa direita ponta
-          ctx.lineTo(-13, 10);
-          ctx.lineTo(-10, 0);   // cauda central
-          ctx.lineTo(-13, -10);
-          ctx.closePath();
+          ctx.ellipse(0, 0.5, 23, 7, 0, 0, Math.PI * 2);
           ctx.fill();
           ctx.stroke();
 
-          // 3. Luzes de navegação neon nas pontas das asas
-          ctx.shadowColor = '#ec4899';
-          ctx.shadowBlur = 8;
-          ctx.fillStyle = '#ec4899';
-          ctx.beginPath();
-          ctx.arc(-6, -16, 2.2, 0, Math.PI * 2);
-          ctx.arc(-6, 16, 2.2, 0, Math.PI * 2);
-          ctx.fill();
-
-          // 4. Fuselagem Central Aerodinâmica
-          ctx.shadowBlur = 0;
-          const bodyGrad = ctx.createLinearGradient(-8, 0, 18, 0);
-          bodyGrad.addColorStop(0, '#334155');
-          bodyGrad.addColorStop(0.6, '#f8fafc');
-          bodyGrad.addColorStop(1, '#38bdf8');
-
-          ctx.fillStyle = bodyGrad;
-          ctx.beginPath();
-          ctx.moveTo(-8, -5);
-          ctx.lineTo(21, 0); // bico
-          ctx.lineTo(-8, 5);
-          ctx.lineTo(-11, 0);
-          ctx.closePath();
-          ctx.fill();
-
-          // 5. Cockpit de Vidro / Cúpula Futurista
-          const glassGrad = ctx.createLinearGradient(0, -3, 10, 3);
-          glassGrad.addColorStop(0, '#ffffff');
-          glassGrad.addColorStop(0.4, '#00f0ff');
-          glassGrad.addColorStop(1, '#0284c7');
-
-          ctx.fillStyle = glassGrad;
-          ctx.beginPath();
-          ctx.ellipse(3, 0, 7, 3.2, 0, 0, Math.PI * 2);
-          ctx.fill();
-
-          // Reflexo no vidro do cockpit
-          ctx.strokeStyle = '#ffffff';
+          // Friso/anel metálico de destaque na carcaça do disco
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.65)';
           ctx.lineWidth = 1;
           ctx.beginPath();
-          ctx.ellipse(4, -1, 4, 1.2, -0.2, 0, Math.PI);
+          ctx.ellipse(0, -0.6, 21, 5, 0, 0, Math.PI * 2);
+          ctx.stroke();
+          ctx.restore();
+
+          // 4. Luzinhas Circulares Piscantes de Disco Voador (Marquee Lights Clássicas)
+          const lightX = [-17, -10, -3.5, 3.5, 10, 17];
+          const lightY = [0.8, 3, 3.8, 3.8, 3, 0.8];
+          const colors = ['#10b981', '#facc15', '#00f0ff', '#ec4899'];
+
+          for (let i = 0; i < lightX.length; i++) {
+            // As luzinhas piscam e giram em sequência
+            const colorIdx = (Math.floor(time * 5.5) + i) % colors.length;
+            const lColor = colors[colorIdx];
+
+            ctx.save();
+            ctx.fillStyle = lColor;
+            ctx.shadowColor = lColor;
+            ctx.shadowBlur = 7;
+            ctx.beginPath();
+            ctx.arc(lightX[i], lightY[i], 1.9, 0, Math.PI * 2);
+            ctx.fill();
+            ctx.restore();
+          }
+
+          // 5. Cúpula / Domo de Vidro Transparente
+          ctx.save();
+          const domeGrad = ctx.createLinearGradient(0, -14, 0, -2);
+          domeGrad.addColorStop(0, 'rgba(255, 255, 255, 0.95)');
+          domeGrad.addColorStop(0.35, 'rgba(16, 185, 129, 0.45)');
+          domeGrad.addColorStop(0.8, 'rgba(0, 240, 255, 0.35)');
+          domeGrad.addColorStop(1, 'rgba(15, 23, 42, 0.6)');
+
+          ctx.fillStyle = domeGrad;
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.75)';
+          ctx.lineWidth = 1.2;
+
+          ctx.beginPath();
+          ctx.ellipse(0, -5.5, 10.5, 8.5, 0, 0, Math.PI * 2);
+          ctx.fill();
           ctx.stroke();
 
+          // 6. O Piloto Alienígena / ET Clássico Cabeçudo
+          // Cabecinha verde de ET
+          ctx.fillStyle = '#22c55e';
+          ctx.beginPath();
+          ctx.ellipse(0, -5, 4.2, 5.2, 0, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Olhos pretos amendoados grandes
+          ctx.fillStyle = '#050505';
+          ctx.beginPath();
+          ctx.ellipse(-1.8, -5.2, 1.3, 2, -0.22, 0, Math.PI * 2);
+          ctx.ellipse(1.8, -5.2, 1.3, 2, 0.22, 0, Math.PI * 2);
+          ctx.fill();
+
+          // Ponto de brilho nos olhos
+          ctx.fillStyle = '#ffffff';
+          ctx.beginPath();
+          ctx.arc(-2, -6, 0.6, 0, Math.PI * 2);
+          ctx.arc(1.6, -6, 0.6, 0, Math.PI * 2);
+          ctx.fill();
+
+          // 7. Antena Retrô com Esferinha no Topo do Domo
+          ctx.strokeStyle = '#cbd5e1';
+          ctx.lineWidth = 1.5;
+          ctx.beginPath();
+          ctx.moveTo(0, -14);
+          ctx.lineTo(0, -17.5);
+          ctx.stroke();
+
+          ctx.fillStyle = '#10b981';
+          ctx.shadowColor = '#10b981';
+          ctx.shadowBlur = 8;
+          ctx.beginPath();
+          ctx.arc(0, -18, 2.2, 0, Math.PI * 2);
+          ctx.fill();
+
+          // 8. Reflexo Curvo no Vidro da Cúpula
+          ctx.shadowBlur = 0;
+          ctx.strokeStyle = 'rgba(255, 255, 255, 0.85)';
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.ellipse(-3, -8.5, 4.5, 2.2, -0.3, 0, Math.PI);
+          ctx.stroke();
+
+          ctx.restore();
           ctx.restore();
         }
       };
@@ -1483,7 +1552,7 @@
         ctx.clearRect(0, 0, width, height);
         background.render(ctx);
         obstacleManager.render(ctx, timestamp * 0.001);
-        player.render(ctx);
+        player.render(ctx, timestamp * 0.001);
 
         requestAnimationFrame(gameLoop);
       }
